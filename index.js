@@ -1,9 +1,8 @@
-'use strict'
+'use strict';
 var es = require('event-stream');
 var gutil = require('gulp-util');
 var browserify = require('browserify');
 var path = require('path');
-var fs = require('fs');
 var isStream = gutil.isStream;
 var isBuffer = gutil.isBuffer;
 
@@ -12,7 +11,7 @@ function error(str) {
 }
 
 module.exports = function(opts) {
-    var opts = opts || {};
+    opts = opts || {};
     var ctrOpts = {};
     var buffer = [];
     var temp = [];
@@ -21,19 +20,23 @@ module.exports = function(opts) {
     var itsAStream = false;
 
     function bufferContents(file) {
-    	buffer.push(file);
+        buffer.push(file);
     }
 
     function endStream() {
-    	if (buffer.length === 0) return this.emit('end');
+        /*jshint -W040 */
+        if (buffer.length === 0) {
+            return this.emit('end');
+        }
 
-    	var self = this;
+        var self = this;
+        /*jshint +W040 */
 
-    	 buffer.map(function (file) {
+        buffer.map(function (file) {
             if(isStream(file.contents)) {
 
                 itsAStream = true;
-               	ctrOpts.basedir = file.base;
+                ctrOpts.basedir = file.base;
                 ctrOpts.entries = file.contents;
             }else if(isBuffer(file.contents)) {
 
@@ -49,20 +52,20 @@ module.exports = function(opts) {
             if(opts.noParse) {
                 ctrOpts.noParse = opts.noParse.map(function(filepath) {
                     return path.resolve(filepath);
-                })
+                });
                 delete opts.noParse;
             }
 
             bundler = browserify(ctrOpts);
             bundler.on('error', function(err) {
                 error(err);
-            })
+            });
 
             if(opts.transform) {
                 opts.transform.forEach(function(transform) {
                     console.log(file.path);
                     bundler.transform(transform);
-                })
+                });
             }
 
             self.emit('prebundle', bundler);
@@ -83,7 +86,7 @@ module.exports = function(opts) {
 
                 self.emit('data', newFile);
                 self.emit('end');
-            }
+            };
 
             if(itsAStream || itsABuffer ) {
                 var readable = bundler.bundle(opts);
@@ -91,14 +94,14 @@ module.exports = function(opts) {
                     chunk += data;
                 }).once('end', function(err) {
                     onBundleComplete(self, err, chunk);
-                })
+                });
             } else {
                 bundler.bundle(opts, function(err, src) {
                     onBundleComplete(self, err, src);
-                })
+                });
             }
-    	});
+        });
 	}
 
 	return es.through(bufferContents, endStream);
-}
+};
